@@ -17,7 +17,7 @@ class PetkitFeederDevice(PetkitDevice):
         self._feed_now_amount_entities: List[PetkitNumberEntity] = []
         super().__init__(data, coordinator, account)
 
-        self._feed_now_endpoint = f'{data["type"]}/saveDailyFeed'
+        self._feed_now_endpoint = f'{self.type}/saveDailyFeed'
 
     @property
     def desiccant(self):
@@ -101,7 +101,8 @@ class PetkitFeederDevice(PetkitDevice):
             'time': -1,
         }
         self._set_feed_now_amount_parameters(pms, **kwargs)
-        rdt = await self.account.request(self._feed_now_endpoint, pms)
+
+        rdt = await self.account.request(self._feed_now_endpoint, pms, 'POST')
         eno = rdt.get('error', {}).get('code', 0)
         if eno:
             _LOGGER.error('Petkit feeding failed: %s', rdt)

@@ -128,6 +128,9 @@ class PetkitAccount:
                 'X-Api-Version': PETKIT_API_VERSION,
                 'X-Client': 'Android(7.1.1;Xiaomi)',
                 'X-Locale': locale.replace("-", "_"),
+                'X-Timezone': '0',
+                'X-TimezoneId': 'Etc/UTC',
+                'X-Img-Version': '1',
                 'X-Session': f'{self.token}',
             }
 

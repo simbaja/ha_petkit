@@ -10,7 +10,7 @@ from .common import PetkitFeederDevice
 class LegacyFeederDevice(PetkitFeederDevice):
     def __init__(self, data: dict, coordinator: DataUpdateCoordinator, account: PetkitAccount):
         super().__init__(data, coordinator, account)
-        self._feed_now_endpoint = f'{data["type"]}/save_DailyFeed'
+        self._feed_now_endpoint = f'{self.type}/save_DailyFeed'
 
     @property
     def scheduled_amount(self):

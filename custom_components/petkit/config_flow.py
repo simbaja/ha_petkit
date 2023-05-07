@@ -92,13 +92,13 @@ class PetkitConfigFlow(ConfigFlow, domain=DOMAIN):
         """Check if config is valid and create entry if so."""
 
         self._user_input[CONF_PASSWORD] = user_input[CONF_PASSWORD]
-        self._user_input[CONF_REGION] = user_input[CONF_REGION]
 
         extra_inputs = user_input
 
         if self._existing_entry:
             extra_inputs = self._existing_entry
         self._user_input[CONF_USERNAME] = extra_inputs[CONF_USERNAME]
+        self._user_input[CONF_REGION] = extra_inputs[CONF_REGION]        
 
         if self.unique_id is None:
             await self.async_set_unique_id(self._user_input[CONF_USERNAME])
