@@ -2,51 +2,16 @@
 
 ## Installing
 
-> [Download](https://github.com/hasscc/petkit/archive/main.zip) and copy `custom_components/petkit` folder to `custom_components` folder in your HomeAssistant config folder
+> [Download](https://github.com/simbaja/ha_petkit/archive/main.zip) and copy `custom_components/petkit` folder to `custom_components` folder in your HomeAssistant config folder.
 
-```shell
-# Auto install via terminal shell
-wget -q -O - https://cdn.jsdelivr.net/gh/al-one/hass-xiaomi-miot/install.sh | DOMAIN=petkit REPO_PATH=hasscc/petkit ARCHIVE_TAG=main bash -
-```
-
+Also can add as a custom repository in HACS and add that way
 
 ## Config
 
-> Recommend sharing devices to another account
+> Configured via Home Assistant UI
 
-```yaml
-# configuration.yaml
+## Alternatives
 
-petkit:
-  # Single account
-  username: 86-18866668888 # Username of Petkit APP (小佩宠物), important to use country code
-  password: abcdefghijklmn # MD5 or Raw password
-  api_base:       # Optional, default is China server: http://api.petkit.cn/6/
-  scan_interval:  # Optional, default is 00:02:00
-  feeding_amount: # Optional, default is 10(g), also can be input_number entity id.
+It looks like RobertD502 made a better integration (I found it after I started converting this one), see [his Github repository](https://github.com/RobertD502/home-assistant-petkit).  
 
-  # Multiple accounts
-  accounts:
-    - username: email1@domain.com
-      password: password1
-      api_base: http://api.petktasia.com/latest/ # Asia server
-      feeding_amount: 20
-    - username: email2@domain.com
-      password: password2
-      api_base: http://api.petkt.com/latest/     # America server
-      feeding_amount: input_number.your_feeding_amount_entity_id # min:10, step:10
-```
-
-
-## Services
-
-#### Request Petkit API
-```yaml
-service: petkit.request_api
-target:
-  entity_id: sensor.d4_xxxxxx_state # Any sensor entity in the account
-data:
-  api: /discovery/device_roster
-  params:
-    key: val
-```
+**Since that integration does everything I wanted to do with these devices, I've discontinued development on this integration.  I've left it up in case it can be of some use to someone.**  
