@@ -7,8 +7,6 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from ...api import PetkitAccount
-
-from ...entities import PetkitSensorEntity
 from .base import PetkitDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,6 +47,7 @@ class PetkitFitDevice(PetkitDevice):
         return self._detail.get('sleepDetail') or {}
 
     def _get_all_entities(self) -> List[Entity]:
+        from ...entities import PetkitSensorEntity
         base_entities = super()._get_all_entities()
 
         fit_entities = [
@@ -69,9 +68,9 @@ class PetkitFitDevice(PetkitDevice):
         return base_entities + fit_entities
 
     async def update_device_detail(self):
-        api = f'{self.device_type}/deviceAllData'
+        api = f'{self.type}/deviceAllData'
         pms = {
-            'deviceId': self.device_id,
+            'deviceId': self.id,
             'day': datetime.datetime.today().strftime('%Y%m%d'),
         }
         rsp = None
@@ -81,6 +80,6 @@ class PetkitFitDevice(PetkitDevice):
         except (TypeError, ValueError):
             rdt = {}
         if not rdt:
-            _LOGGER.warning('Got petkit device detail for %s failed: %s', self.device_name, rsp)
+            _LOGGER.warning('Got petkit device detail for %s failed: %s', self.name, rsp)
         self._detail = rdt
         return rdt

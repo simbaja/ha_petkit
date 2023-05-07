@@ -12,25 +12,23 @@ class PetkitEntity(CoordinatorEntity):
         CoordinatorEntity.__init__(self, device.coordinator)
         
         self._coordinator = device.coordinator
-        self._account = self._coordinator.account
-
         self._name = name
         self._device = device
         self._option = option or {}      
 
-        self._attr_name = f'{device.device_name} {name}'.strip()
-        self._attr_device_id = device.device_id
+        self._attr_name = f'{device.name} {name}'.strip()
+        self._attr_device_id = device.id
         self._attr_unique_id = f'{self._attr_device_id}-{name}'
         self._attr_icon = self._option.get('icon')
         self._attr_device_class = self._option.get('class')
         self._attr_unit_of_measurement = self._option.get('unit')
 
         self._attr_device_info = {
-            'identifiers': device.device_id,
-            'name': device.device_name,
-            'model': device.device_type,
+            'identifiers': device.id,
+            'name': device.name,
+            'model': device.type,
             'manufacturer': 'Petkit',
-            'sw_version': device.device_firmware,
+            'sw_version': device.firmware_version
         }
 
     async def async_added_to_hass(self):
@@ -57,6 +55,10 @@ class PetkitEntity(CoordinatorEntity):
     @property
     def unit_of_measurement(self):
         return self._attr_unit_of_measurement
+
+    @property
+    def device_info(self):
+        return self._device.device_info
 
 class PetkitBinaryEntity(PetkitEntity):
     def __init__(self, name, device: PetkitDevice, option=None):

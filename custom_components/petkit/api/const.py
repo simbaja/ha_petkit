@@ -1,9 +1,10 @@
-DEFAULT_API_BASE = 'https://api.petkit.cn/6/'
+DEFAULT_API_BASE = 'https://api.petkit.cn/latest/'
 REGION_URI_MAPPING = {
-    "US": "https://api.petkit.com/6/",
+    "US": "https://api.petkt.com/latest/",
+    "ASIA": "https://api.petktasia.com/latest/",
     "CN": DEFAULT_API_BASE
 }
 
-PETKIT_API_VERSION = '7.29.1'
+PETKIT_API_VERSION = "8.29.2"
 LOGIN_ENDPOINT = "user/login"
 DEVICE_ROSTER_ENDPOINT = "discovery/device_roster"

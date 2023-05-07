@@ -2,7 +2,7 @@ import logging
 from typing import Type
 
 from .common import PetkitDevice
-from .feeder import FeederFeederDevice
+from .legacy import LegacyFeederDevice
 from .d3 import D3FeederDevice
 from .d4 import D4FeederDevice
 from .d4s import D4sFeederDevice
@@ -15,11 +15,11 @@ _LOGGER = logging.getLogger(__name__)
 
 def get_device_type(device_type: str) -> Type:
     """Get the appropriate device type"""
-    _LOGGER.debug(f"Found device type: {device_type}")
+    _LOGGER.info(f"Found device type: {device_type}")
 
     return {
-        'feeder': FeederFeederDevice,
-        'feedermini': FeederFeederDevice,
+        'feeder': LegacyFeederDevice,
+        'feedermini': LegacyFeederDevice,
         'd3': D3FeederDevice,
         'd4': D4FeederDevice,
         'd4s': D4sFeederDevice,

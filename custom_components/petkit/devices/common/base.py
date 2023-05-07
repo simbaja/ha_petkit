@@ -5,6 +5,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from ...api import PetkitAccount
+from ...const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,27 +13,38 @@ class PetkitDevice:
     def __init__(self, data: dict, coordinator: DataUpdateCoordinator, account: PetkitAccount):
         self._coordinator = coordinator
         self._account = account
-        self._id = data['id']
-        self.listeners = {}
+        
+        self._id: int = data['id']
+        self._name: str = data['name']
+        self._type: str = data['type'].lower()
+
         self._detail = {}
         self._entities = {}
         self._build_entities_list()        
 
     @property
-    def device_id(self):
+    def id(self):
         return self._id
 
     @property
-    def device_type(self):
-        return self._cache.get('type', '').lower()
+    def type(self):
+        return self._type
 
     @property
-    def device_name(self):
-        return self._cache.get('name', '')
+    def name(self):
+        return self._name
 
     @property
-    def device_firmware(self):
-        return self._cache.get('firmware', '')
+    def serial_number(self):
+        return self._detail.get('sn', '')
+
+    @property
+    def mac_addr(self):
+        return self._detail.get('mac', '')
+
+    @property
+    def firmware_version(self):
+        return self._detail.get('firmware', '')
 
     @property
     def status(self):
@@ -76,8 +88,20 @@ class PetkitDevice:
         return list(self._entities.values())
 
     @property
+    def device_info(self):
+        return {
+            'identifiers': {(DOMAIN, str(self.id))},
+            'name': self.name,
+            'model': self.type,
+            'manufacturer': 'Petkit',
+            'sw_version': self.firmware_version
+        }
+
+    @property
     def _cache(self) -> dict:
-        return self._coordinator.data.get(self.device_id)
+        if self._coordinator.data is None:
+            return {}
+        return self._coordinator.data.get(self.id, {})
 
     def _build_entities_list(self) -> dict[str, Entity]:
         """Build the entities list, adding anything new."""
@@ -107,9 +131,9 @@ class PetkitDevice:
         return entities
 
     async def update_device_detail(self):
-        api = f'{self.device_type}/device_detail'
+        api = f'{self.type}/device_detail'
         pms = {
-            'id': self.device_id,
+            'id': self.id,
         }
         rsp = None
         try:
@@ -117,8 +141,8 @@ class PetkitDevice:
             rdt = rsp.get('result') or {}
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error('Got petkit device detail for %s failed: %s', self.device_name, exc)
+            _LOGGER.error('Got petkit device detail for %s failed: %s', self.name, exc)
         if not rdt:
-            _LOGGER.warning('Got petkit device detail for %s failed: %s', self.device_name, rsp)
+            _LOGGER.warning('Got petkit device detail for %s failed: %s', self.name, rsp)
         self._detail = rdt
         return rdt

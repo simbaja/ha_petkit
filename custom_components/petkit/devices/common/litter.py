@@ -8,14 +8,6 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from ...api import PetkitAccount
-
-from ...entities import (
-    PetkitSensorEntity,
-    PetkitBinarySensorEntity,
-    PetkitSwitchEntity,
-    PetkitButtonEntity,
-    PetkitSelectEntity
-)
 from .base import PetkitDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -112,6 +104,13 @@ class PetkitLitterDevice(PetkitDevice):
         return True if self.detail.get('settings', {}).get('manualLock') else False
 
     def _get_all_entities(self) -> List[Entity]:
+        from ...entities import (
+            PetkitSensorEntity,
+            PetkitBinarySensorEntity,
+            PetkitSwitchEntity,
+            PetkitButtonEntity,
+            PetkitSelectEntity
+        )        
         base_entities = super()._get_all_entities()
 
         litter_entities = [         
@@ -183,9 +182,9 @@ class PetkitLitterDevice(PetkitDevice):
     async def update_device_detail(self):
         await super().update_device_detail()
 
-        api = f'{self.device_type}/getDeviceRecord'
+        api = f'{self.type}/getDeviceRecord'
         pms = {
-            'deviceId': self.device_id,
+            'deviceId': self.id,
         }
         self._set_device_detail_parameters(pms)
 
@@ -196,7 +195,7 @@ class PetkitLitterDevice(PetkitDevice):
         except (TypeError, ValueError):
             rdt = {}
         if not rdt:
-            _LOGGER.warning('Got petkit device records for %s failed: %s', self.device_name, rsp)
+            _LOGGER.warning('Got petkit device records for %s failed: %s', self.name, rsp)
         self.detail['records'] = rdt
         return rdt
 
@@ -247,10 +246,10 @@ class PetkitLitterDevice(PetkitDevice):
         return await self.async_control_device(kv=dat, api='updateSettings')
 
     async def async_control_device(self, api='controlDevice', **kwargs):
-        typ = self.device_type
+        typ = self.type
         api = f'{typ}/{api}'
         pms = {
-            'id': self.device_id,
+            'id': self.id,
             **kwargs,
         }
         rdt = await self.account.request(api, pms)

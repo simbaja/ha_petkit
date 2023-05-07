@@ -4,7 +4,7 @@ import asyncio
 import async_timeout
 from datetime import timedelta
 import logging
-from typing import Any
+from typing import Any, Dict, List
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -43,11 +43,12 @@ class PetkitUpdateCoordinator(DataUpdateCoordinator):
         """Set up the PetkitUpdateCoordinator class."""
         self._hass = hass
         self._config_entry = config_entry 
+        self._session = aiohttp_client.async_get_clientsession(hass)
         
         self._username = config_entry.data[CONF_USERNAME]
         self._password = config_entry.data[CONF_PASSWORD]
         self._region = config_entry.data[CONF_REGION]
-        self._api = self._get_api_from_config(hass, config_entry)
+        self._api = PetkitAccount(self._session, self._username, self._password, self._region)
 
         options = config_entry.options
         self._update_interval = options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
@@ -56,6 +57,10 @@ class PetkitUpdateCoordinator(DataUpdateCoordinator):
         self.devices: dict[str, PetkitDevice] = {}
 
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=self._update_interval))
+
+    @property
+    def api(self):
+        return self._api
 
     async def async_setup(self):
         """Setup a new coordinator"""
@@ -100,11 +105,12 @@ class PetkitUpdateCoordinator(DataUpdateCoordinator):
             existing_devices: list[str] = self.devices.keys()
             
             async with async_timeout.timeout(self._timeout):
+                response = await self._api.get_devices()
+                _LOGGER.debug(f"Received Petkit device update: {response}")
+
                 data = { 
-                    d["id"]: d
-                    for x in await self._api.get_devices()
-                    for d in x["data"] or {}
-                    if d["id"] 
+                    x["data"]["id"]: x["data"] | { "type": x["type"] }
+                    for x in response
                 }
 
             #build the device list if needed
@@ -125,10 +131,10 @@ class PetkitUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Error communicating with API: {err}")
 
     async def _build_devices(self, data: dict[str,Any]):
-        for id in data.keys():
+        for id, device_data in data.items():
             _LOGGER.info(f"Found Petkit device with id={id}, setting up...")
-            device_type = get_device_type(data["type"].lower())
-            self.devices[id] = device_type(data, self, self._api)
+            device_type = get_device_type(device_data["type"].lower())
+            self.devices[id] = device_type(device_data, self, self._api)
 
     async def _detect_new_devices(self, old: list[str], new: dict[str,Any]):
         diff = set(new)-set(old)
@@ -136,12 +142,4 @@ class PetkitUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.info(
                 f"New device with id={id} detected, reload the Petkit integration if you want to access it in Home Assistant"
             )
-
-    def _get_api_from_config(self, hass: HomeAssistant, config_entry: ConfigEntry):
-        return PetkitAccount(
-            aiohttp_client.async_get_clientsession(self.hass),
-            config_entry[CONF_USERNAME],
-            config_entry[CONF_PASSWORD],
-            config_entry[CONF_REGION]
-        )
 

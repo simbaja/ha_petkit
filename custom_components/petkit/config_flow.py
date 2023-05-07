@@ -15,7 +15,6 @@ import homeassistant.helpers.config_validation as cv
 from .api import PetkitAccount, REGION_URI_MAPPING
 from .const import (
     CONF_TIMEOUT,
-    CONF_TOKEN,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,

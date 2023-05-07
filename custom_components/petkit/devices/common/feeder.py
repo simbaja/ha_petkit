@@ -7,25 +7,17 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from ...api import PetkitAccount
-
-from ...entities import (
-    PetkitSensorEntity,
-    PetkitBinarySensorEntity,
-    PetkitNumberEntity,
-    PetkitFeedAmountEntity,
-    PetkitButtonEntity
-)
 from .base import PetkitDevice
 
 _LOGGER = logging.getLogger(__name__)
 
 class PetkitFeederDevice(PetkitDevice):
     def __init__(self, data: dict, coordinator: DataUpdateCoordinator, account: PetkitAccount):
-        super().__init__(data, coordinator, account)
+        from ...entities import PetkitNumberEntity
         self._feed_now_amount_entities: List[PetkitNumberEntity] = []
-        self._feed_now_endpoint = f'{self.device_type}/saveDailyFeed'
+        super().__init__(data, coordinator, account)
 
-        self._init_feed_now_amount_entities()
+        self._feed_now_endpoint = f'{data["type"]}/saveDailyFeed'
 
     @property
     def desiccant(self):
@@ -42,33 +34,8 @@ class PetkitFeederDevice(PetkitDevice):
         }
 
     @property
-    def feed_times(self):
-        return self.feed_state_attrs().get('times', 0)
-
-    @property
-    def feed_amount(self):
-        fas = self.feed_state_attrs()
-        return fas.get('realAmountTotal', 0)
-
-    @property
-    def eat_amount(self):
-        return self.feed_state_attrs().get('eatAmountTotal', 0)
-
-    @property
-    def eat_times(self):
-        times = self.feed_state_attrs().get('eatTimes', [])
-        return len(times)
-
-    @property
-    def bowl_weight(self):
-        return self.status.get('weight', 0)
-
-    @property
     def feed_now_amount(self):
         return self.get_feed_now_amount()
-
-    def feed_state_attrs(self):
-        return self._detail.get('state', {}).get('feedState') or {}
 
     def get_feed_now_amount(self, index=0):
         num = self._feed_now_amount_entities[index].state
@@ -83,25 +50,22 @@ class PetkitFeederDevice(PetkitDevice):
         return {
             'feeding_amount': self.feed_now_amount,
             'desc': self._cache.get('desc'),
-            'error': self.status.get('errorMsg'),
-            **self.feed_state_attrs(),
+            'error': self.status.get('errorMsg')
         }
 
     def _get_all_entities(self) -> List[Entity]:
+        #deal with circular imports by bringing in the sensors here
+        from ...entities import (
+            PetkitSensorEntity,
+            PetkitBinarySensorEntity,
+            PetkitButtonEntity
+        )
         base_entities = super()._get_all_entities()
+
+        self._init_feed_now_amount_entities()
 
         feeder_entities = [
             PetkitSensorEntity('desiccant', self, {'unit': 'days', 'icon': 'mdi:air-filter' }),
-            PetkitSensorEntity('feed_times', self, {
-                    'unit': 'times',
-                    'icon': 'mdi:counter',
-                    'state_attrs': self.feed_state_attrs,
-                }),
-            PetkitSensorEntity('feed_amount', self, {
-                    'unit': MASS_GRAMS,
-                    'icon': 'mdi:weight-gram',
-                    'state_attrs': self.feed_state_attrs,
-                }),
             PetkitBinarySensorEntity('food_state', self, {
                 'icon': 'mdi:food-drumstick-outline',
                 'class': 'problem',
@@ -121,6 +85,7 @@ class PetkitFeederDevice(PetkitDevice):
         return entities
 
     def _init_feed_now_amount_entities(self):
+        from ...entities import PetkitFeedAmountEntity
         self._feed_now_amount_entities.append(PetkitFeedAmountEntity('feed_now_amount', self))
 
     def _set_feed_now_amount_parameters(self, pms: Dict, **kwargs):
@@ -131,11 +96,11 @@ class PetkitFeederDevice(PetkitDevice):
 
     async def async_feed_now(self, **kwargs):
         pms = {
-            'deviceId': self.device_id,
+            'deviceId': self.id,
             'day': datetime.datetime.today().strftime('%Y%m%d'),
             'time': -1,
         }
-        self._set_feed_now_amount_parameters(pms, kwargs)
+        self._set_feed_now_amount_parameters(pms, **kwargs)
         rdt = await self.account.request(self._feed_now_endpoint, pms)
         eno = rdt.get('error', {}).get('code', 0)
         if eno:

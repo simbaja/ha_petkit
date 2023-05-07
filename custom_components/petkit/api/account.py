@@ -1,10 +1,11 @@
+from sys import exc_info
 import aiohttp
 from datetime import datetime, timedelta
 import logging
 import hashlib
 
 from asyncio import TimeoutError
-from aiohttp import ClientConnectorError, ContentTypeError
+from aiohttp import ClientConnectorError, ContentTypeError, ClientError
 
 from .const import (
     DEFAULT_API_BASE, 
@@ -28,7 +29,7 @@ class PetkitAccount:
 
         self._user_id = None
         self._token = None
-        self._expiration_date = datetime.utcnow
+        self._expiration_date = None
         self._cache = []
 
     @property
@@ -54,9 +55,9 @@ class PetkitAccount:
         base_url = self._api_base_url or DEFAULT_API_BASE
         return f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 
-    async def request(self, api: str, pms:None, method='GET', **kwargs):
+    async def request(self, api: str, pms=None, method='GET', **kwargs):
         await self._ensure_token()
-        rsp = self._request(api, pms, method, kwargs)
+        rsp = await self._request(api, pms, method, **kwargs)
 
         #try again if the request failed due to an auth issue
         eno = rsp.get('error', {}).get('code', 0)
@@ -74,7 +75,7 @@ class PetkitAccount:
         cdt = datetime.now()
         if (self._token or self._expiration_date) is None:
             await self.async_login()
-        elif (self.token_expiration-cdt).total_seconds() < 3600:
+        elif (self._expiration_date-cdt).total_seconds() < 3600:
             await self.async_login()
         else:
             return None
@@ -101,19 +102,26 @@ class PetkitAccount:
         req = None
 
         try:
-            req = await self.http.request(method, url, **kws)
+            req = await self._session.request(method, url, **kws)
             return await req.json() or {}
         except (ClientConnectorError, ContentTypeError, TimeoutError) as exc:
             lgs = [method, url, pms, exc]
             if req:
                 lgs.extend([req.status, req.content])
-            _LOGGER.error('Request Petkit api failed: %s', lgs)
+            _LOGGER.error('Petkit API failed to connect: %s', lgs, exc_info=exc)
+        except ClientError as exc:
+            lgs = [method, url, pms, exc]
+            if req:
+                lgs.extend([req.status, req.content])       
+            _LOGGER.error('Petkit API error: %s', lgs, exc_info=exc)
+            raise PetkitServerError(exc_info=exc)
         return {}
 
     def _get_custom_headers(self):
         #should be able to set the local and tz, but for now
-        #that isn't implemented
-        locale = 'en-US' if self._region == "US" else 'zh-CN'
+        #that isn't implemented assume everywhere but china
+        #would use english
+        locale = 'zh-CN' if self._region == "CN" else 'en-US'
 
         return {
                 'User-Agent': 'okhttp/3.12.1',
@@ -131,8 +139,10 @@ class PetkitAccount:
             'oldVersion': '',
         }
 
+        response = None
+
         try:
-            response = await self.request(LOGIN_ENDPOINT, pms, 'POST_GET')
+            response = await self._request(LOGIN_ENDPOINT, pms, 'POST_GET')
             session = response.get('result', {}).get('session') or {}
            
             createdAt = datetime.strptime(
@@ -150,7 +160,7 @@ class PetkitAccount:
                 )
             )        
         except Exception as err:
-            raise PetkitAuthFailedError(f'Petkit login {self._username} failed: {response}')
+            raise PetkitAuthFailedError(f'Petkit login for "{self._username}" failed: {response}')
 
     async def get_devices(self):
         api = DEVICE_ROSTER_ENDPOINT
