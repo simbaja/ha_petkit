@@ -55,7 +55,7 @@ class PetkitLitterDevice(PetkitDevice):
 
     @property
     def work_mode(self):
-        return self.status.get('workState', {}).get('workMode', 0)
+        return self.status.get('workState', {}).get('workMode', -1)
 
     @property
     def action(self):

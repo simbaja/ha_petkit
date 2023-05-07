@@ -1,11 +1,18 @@
 import aiohttp
+from datetime import datetime, timedelta
 import logging
 import hashlib
 
 from asyncio import TimeoutError
 from aiohttp import ClientConnectorError, ContentTypeError
 
-from .const import DEFAULT_API_BASE, REGION_URI_MAPPING
+from .const import (
+    DEFAULT_API_BASE, 
+    DEVICE_ROSTER_ENDPOINT, 
+    LOGIN_ENDPOINT, 
+    PETKIT_API_VERSION, 
+    REGION_URI_MAPPING
+)
 from .exceptions import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,6 +28,7 @@ class PetkitAccount:
 
         self._user_id = None
         self._token = None
+        self._expiration_date = datetime.utcnow
         self._cache = []
 
     @property
@@ -35,7 +43,11 @@ class PetkitAccount:
     def device_data_cache(self):
         return self._cache
 
-    def get_full_uri(self, endpoint=''):
+    @property
+    def is_authorized(self):
+        return self._expiration_date > datetime.utcnow()
+
+    def _get_full_uri(self, endpoint=''):
         if endpoint[:6] == 'https:' or endpoint[:5] == 'http:':
             return endpoint
 
@@ -43,6 +55,7 @@ class PetkitAccount:
         return f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 
     async def request(self, api: str, pms:None, method='GET', **kwargs):
+        await self._ensure_token()
         rsp = self._request(api, pms, method, kwargs)
 
         #try again if the request failed due to an auth issue
@@ -57,18 +70,22 @@ class PetkitAccount:
 
         return rsp
 
+    async def _ensure_token(self) -> None:
+        cdt = datetime.now()
+        if (self._token or self._expiration_date) is None:
+            await self.async_login()
+        elif (self.token_expiration-cdt).total_seconds() < 3600:
+            await self.async_login()
+        else:
+            return None
+
     async def _request(self, api: str, pms=None, method='GET', **kwargs):
         method = method.upper()
-        url = self.get_full_uri(api)
+        url = self._get_full_uri(api)
 
         kws = {
             'timeout': 30,
-            'headers': {
-                'User-Agent': 'okhttp/3.12.1',
-                'X-Api-Version': '7.29.1',
-                'X-Client': 'Android(7.1.1;Xiaomi)',
-                'X-Session': f'{self.token}',
-            },
+            'headers': self._get_custom_headers(),
         }
 
         kws.update(kwargs)
@@ -93,6 +110,19 @@ class PetkitAccount:
             _LOGGER.error('Request Petkit api failed: %s', lgs)
         return {}
 
+    def _get_custom_headers(self):
+        #should be able to set the local and tz, but for now
+        #that isn't implemented
+        locale = 'en-US' if self._region == "US" else 'zh-CN'
+
+        return {
+                'User-Agent': 'okhttp/3.12.1',
+                'X-Api-Version': PETKIT_API_VERSION,
+                'X-Client': 'Android(7.1.1;Xiaomi)',
+                'X-Locale': locale.replace("-", "_"),
+                'X-Session': f'{self.token}',
+            }
+
     async def async_login(self):
         pms = {
             'encrypt': 1,
@@ -101,18 +131,29 @@ class PetkitAccount:
             'oldVersion': '',
         }
 
-        rsp = await self.request(f'user/login', pms, 'POST_GET')
-        ssn = rsp.get('result', {}).get('session') or {}
-        sid = ssn.get('id')
+        try:
+            response = await self.request(LOGIN_ENDPOINT, pms, 'POST_GET')
+            session = response.get('result', {}).get('session') or {}
+           
+            createdAt = datetime.strptime(
+                session["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            self._token = session["id"]
+            self._expiration_date = createdAt + timedelta(
+                seconds=session["expiresIn"]
+            )
+            self._user_id = session["userId"]
 
-        if not sid:
-            raise PetkitAuthFailedError(f'Petkit login {self._username} failed: {rsp}')
-
-        self._token = sid
-        self._user_id = ssn.get('userId')
+            _LOGGER.debug(
+                "Obtained access token {} and expiration datetime {}".format(
+                    self._token, self._expiration_date
+                )
+            )        
+        except Exception as err:
+            raise PetkitAuthFailedError(f'Petkit login {self._username} failed: {response}')
 
     async def get_devices(self):
-        api = 'discovery/device_roster'
+        api = DEVICE_ROSTER_ENDPOINT
         rsp = await self.request(api)
 
         self._cache = rsp.get('result', {}).get('devices') or []
