@@ -1,32 +1,26 @@
-"""Support for binary_sensor."""
 import logging
+from typing import Callable
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.components.binary_sensor import (
-    BinarySensorEntity,
-    DOMAIN as ENTITY_DOMAIN,
-)
 
-from . import (
-    DOMAIN,
-    PetkitBinaryEntity,
-    async_setup_accounts,
-)
+from .const import DOMAIN
+from .entities import PetkitBinarySensorEntity
+from .update_coordinator import PetkitUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_KEY = f'{ENTITY_DOMAIN}.{DOMAIN}'
-
-
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    cfg = {**config_entry.data, **config_entry.options}
-    await async_setup_platform(hass, cfg, async_setup_platform, async_add_entities)
-
-
-async def async_setup_platform(hass: HomeAssistant, config, async_add_entities, discovery_info=None):
-    hass.data[DOMAIN]['add_entities'][ENTITY_DOMAIN] = async_add_entities
-    await async_setup_accounts(hass, ENTITY_DOMAIN)
-
-
-class PetkitBinarySensorEntity(PetkitBinaryEntity, BinarySensorEntity):
-    """ PetkitBinarySensorEntity """
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: Callable):
+    _LOGGER.debug('Adding Petkit binary sensors')
+    coordinator: PetkitUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    
+    devices = list(coordinator.devices.values())
+    _LOGGER.debug(f'Found {len(devices):d} devices')
+    entities = [
+        entity
+        for device in devices
+        for entity in device.entities
+        if isinstance(entity, PetkitBinarySensorEntity)
+    ]
+    _LOGGER.debug(f'Found {len(entities):d} binary sensors')
+    async_add_entities(entities)

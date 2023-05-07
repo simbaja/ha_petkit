@@ -1,0 +1,40 @@
+{
+  "title": "Petkit",
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "username": "Username",
+          "password": "Password",
+          "region": "Region"
+        }
+      },
+      "reauth_confirm": {
+        "description": "Authentication tokens became invalid, login to recreate them.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid login",      
+      "cannot_connect": "Cannot connect",
+      "unknown": "Unknown error occured"
+    },
+    "abort": {
+      "already_configured": "Account already configured",
+      "reauth_successful": "Reauthentication was successful!"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Scan Interval",
+          "timeout": "Timeout"
+        } 
+      }
+    }
+  }
+}

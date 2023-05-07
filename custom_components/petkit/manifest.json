@@ -1,10 +1,13 @@
 {
   "domain": "petkit",
   "name": "Petkit",
-  "codeowners": ["@al-one"],
-  "documentation": "https://github.com/hasscc/petkit",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/hasscc/petkit/issues",
+  "config_flow": true,
+  "codeowners": ["@al-one","@simbaja"],
+  "documentation": "https://github.com/simbaja/petkit",
+  "issue_tracker": "https://github.com/simbaja/petkit/issues",
   "requirements": [],
+  "dependencies": [],
+  "after_dependencies": [],  
   "version": "0.1.0"
 }
