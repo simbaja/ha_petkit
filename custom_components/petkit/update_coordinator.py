@@ -33,7 +33,7 @@ from .const import (
 )
 from .devices import PetkitDevice, get_device_type
 
-PLATFORMS = ["sensor","switch","select","button","binary_sensor"]
+PLATFORMS = ["sensor","switch","select","button","binary_sensor","number"]
 _LOGGER = logging.getLogger(__name__)
 
 class PetkitUpdateCoordinator(DataUpdateCoordinator):

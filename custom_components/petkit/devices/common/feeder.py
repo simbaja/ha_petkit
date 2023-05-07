@@ -12,6 +12,7 @@ from ...entities import (
     PetkitSensorEntity,
     PetkitBinarySensorEntity,
     PetkitNumberEntity,
+    PetkitFeedAmountEntity,
     PetkitButtonEntity
 )
 from .base import PetkitDevice
@@ -120,7 +121,7 @@ class PetkitFeederDevice(PetkitDevice):
         return entities
 
     def _init_feed_now_amount_entities(self):
-        self._feed_now_amount_entities.append(PetkitNumberEntity('feed_now_amount', self))
+        self._feed_now_amount_entities.append(PetkitFeedAmountEntity('feed_now_amount', self))
 
     def _set_feed_now_amount_parameters(self, pms: Dict, **kwargs):
         pms.update(

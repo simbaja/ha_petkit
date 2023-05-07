@@ -4,7 +4,7 @@ from homeassistant.const import *
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from ..api import PetkitAccount
-from ..entities import PetkitNumberEntity
+from ..entities import PetkitFeedAmountEntity
 from .common import PetkitFeederDevice
 
 class D4sFeederDevice(PetkitFeederDevice):
@@ -30,8 +30,8 @@ class D4sFeederDevice(PetkitFeederDevice):
         }
 
     def _init_feed_now_amount_entities(self):
-        self._feed_now_amount_entities.append(PetkitNumberEntity('feed_now_amount1', self))
-        self._feed_now_amount_entities.append(PetkitNumberEntity('feed_now_amount2', self))
+        self._feed_now_amount_entities.append(PetkitFeedAmountEntity('feed_now_amount1', self))
+        self._feed_now_amount_entities.append(PetkitFeedAmountEntity('feed_now_amount2', self))
 
     def _set_feed_now_amount_parameters(self, pms: Dict, **kwargs):
         pms.update({
